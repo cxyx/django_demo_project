@@ -4,23 +4,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 # Create your models here.
 
-'''
-之前被限定住了
-
-工单角色 : 用来为下拉筛选框提供可选择对象
-
-工单权限 : 之前是当前处理人+工单状态 + 工单类型 = 工单权限
-    设计思路两种 : 
-        1. 设计工单权限表,根据工单状态+工单类型获取工单权限
-        2. 直接在工单表中加字段
-'''
-
-class WorkOrderBase(models.Model):
-    number = models.CharField(max_length=30, unique=True, verbose_name="工单号", help_text="工单号")
-    title = models.CharField(max_length=30, unique=True, verbose_name="工单标题", help_text="工单标题")
-    content = models.CharField(max_length=30, unique=True, verbose_name="工单内容", help_text="工单内容")
-
-class WorkOrder(models.Model,WorkOrderBase):
+class WorkOrder(models.Model):
     type_choices = (
         ('1', '环境申请'),
         ('2', '数据恢复'),
@@ -37,6 +21,10 @@ class WorkOrder(models.Model,WorkOrderBase):
         ('7', '待确认'),
         ('8', '已关闭'))
 
+    number = models.CharField(max_length=30, unique=True, verbose_name="工单号", help_text="工单号")
+    title = models.CharField(max_length=30, unique=True, verbose_name="工单标题", help_text="工单标题")
+    content = models.CharField(max_length=30, unique=True, verbose_name="工单内容", help_text="工单内容")
+    # paso_name = models.ForeignKey(max_length=30, unique=True, verbose_name="工单内容",help_text="工单内容")
     type = models.CharField(max_length=30, choices=type_choices, default='0', verbose_name="工单类型", help_text="工单类型")
     status = models.CharField(max_length=30, choices=status_choices, default='0', verbose_name="工单状态", help_text="工单状态")
     is_show = models.BooleanField(blank=True, null=False, default=True, verbose_name='是否显示')
@@ -60,6 +48,20 @@ class WorkOrder(models.Model,WorkOrderBase):
 
     def __str__(self):
         return self.number
+
+    @property
+    def get_menus(self):
+        def get_menu_config_dict():
+            return {}
+
+        todoer_roles = self.todoer.workorder_role.values_list()
+        type = self.type
+        status = self.status
+        type = str(int(type) + 0.5) if "final_approve" in todoer_roles and 1 else type
+
+        menu_list = get_menu_config_dict[type][status]
+
+        return menu_list
 
 
 class EnvCreateDetail(models.Model):
@@ -99,6 +101,10 @@ class DbRecoveryOrder(models.Model):
                                            help_text="敏感信息表")
     oa_info_list = models.FileField(upload_to='file/%Y/%m/%d', null=True, blank=True, verbose_name="oa稿签表",
                                     help_text="oa稿签表")
+
+    class Meta:
+        verbose_name = "数据恢复详情"
+        verbose_name_plural = verbose_name
 
 
 class FaultResolveOrder(models.Model):
